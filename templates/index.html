@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG System with Dynamic Functions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        
+        .info-bar {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1em;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .upload-section, .ask-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"], input[type="file"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        .answer-section {
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .thinking-section {
+            background: #fff9e6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .function-outputs {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .function-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .function-result.error {
+            background: #ffebee;
+            border-left: 3px solid #f44336;
+        }
+        
+        .function-result.success {
+            background: #e8f5e9;
+            border-left: 3px solid #4caf50;
+        }
+        
+        .sources {
+            margin-top: 20px;
+        }
+        
+        .source-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #764ba2;
+        }
+        
+        .source-header {
+            font-weight: bold;
+            color: #764ba2;
+            margin-bottom: 5px;
+        }
+        
+        .document-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .folder-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #eee;
+        }
+        
+        .folder-name {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .file-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        
+        .flash {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .flash.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .flash.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .flash.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .functions-list {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .function-card {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .function-name {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .function-params {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+        
+        .function-doc {
+            color: #333;
+            margin-top: 5px;
+        }
+        
+        .api-endpoint {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 RAG System with Dynamic Functions</h1>
+        <p class="subtitle">Document Q&A with Automatic Function Execution</p>
+        
+        <div class="info-bar">
+            <div class="info-item">
+                <span>📚 Documents:</span>
+                <span class="badge">{{ index_stats.total_files or 0 }}</span>
+            </div>
+            <div class="info-item">
+                <span>📦 Chunks:</span>
+                <span class="badge">{{ index_stats.total_chunks or 0 }}</span>
+            </div>
+            <div class="info-item">
+                <span>📁 Folders:</span>
+                <span class="badge">{{ index_stats.folders|length or 0 }}</span>
+            </div>
+            <div class="info-item">
+                <span>⚡ Functions:</span>
+                <span class="badge" id="functions-count">Loading...</span>
+            </div>
+            {% if last_index_update %}
+            <div class="info-item">
+                <span>🕐 Updated:</span>
+                <span>{{ last_index_update.strftime('%H:%M:%S') }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('ask')">❓ Ask Question</button>
+            <button class="tab" onclick="switchTab('upload')">📤 Upload Documents</button>
+            <button class="tab" onclick="switchTab('documents')">📚 View Documents</button>
+            <button class="tab" onclick="switchTab('functions')">⚡ Functions</button>
+        </div>
+        
+        <!-- Ask Tab -->
+        <div id="ask-tab" class="tab-content active">
+            <div class="ask-section">
+                <form method="POST" action="/ask">
+                    <div class="form-group">
+                        <label for="question">Your Question:</label>
+                        <textarea 
+                            name="question" 
+                            id="question" 
+                            placeholder="Ask a question about your documents..." 
+                            required>{{ question or '' }}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="strategy">Prompt Strategy:</label>
+                        <select name="strategy" id="strategy">
+                            {% for strat in available_strategies %}
+                                <option value="{{ strat }}" {% if strat == current_strategy %}selected{% endif %}>
+                                    {{ strat }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit">🔍 Ask Question</button>
+                </form>
+            </div>
+            
+            {% if answer %}
+                {% if thinking %}
+                <div class="thinking-section">
+                    <h3>💭 Thinking Process:</h3>
+                    <pre style="white-space: pre-wrap; font-family: inherit;">{{ thinking }}</pre>
+                </div>
+                {% endif %}
+                
+                <div class="answer-section">
+                    <h3>💡 Answer:</h3>
+                    <div style="white-space: pre-wrap; line-height: 1.6;">{{ answer }}</div>
+                </div>
+                
+                {% if function_outputs is defined and function_outputs %}
+                <div class="function-outputs">
+                    <h3>⚡ Function Executions:</h3>
+                    {% for func_output in function_outputs %}
+                        <div class="function-result {{ func_output.status }}">
+                            <strong>Function:</strong> <code>{{ func_output.function }}</code><br>
+                            <strong>Arguments:</strong> {{ func_output.args }}<br>
+                            {% if func_output.status == 'success' %}
+                                <strong>Result:</strong> <span style="color: #4caf50;">✅ {{ func_output.result }}</span>
+                            {% else %}
+                                <strong>Error:</strong> <span style="color: #f44336;">❌ {{ func_output.error }}</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if sources %}
+                <div class="sources">
+                    <h3>📄 Sources:</h3>
+                    {% for source in sources %}
+                        <div class="source-item">
+                            <div class="source-header">
+                                {{ source.folder }} / {{ source.filename }}
+                                <span style="float: right; color: #999;">Score: {{ "%.3f"|format(source.score) }}</span>
+                            </div>
+                            <div>{{ source.snippet }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+        
+        <!-- Upload Tab -->
+        <div id="upload-tab" class="tab-content">
+            <div class="upload-section">
+                <form method="POST" action="/" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="file">Select File:</label>
+                        <input type="file" name="file" id="file" accept=".txt,.pdf,.docx" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="folder">Folder/Category:</label>
+                        <input type="text" name="folder" id="folder" placeholder="e.g., technical, research, general" value="general">
+                    </div>
+                    
+                    <button type="submit">📤 Upload Document</button>
+                </form>
+                
+                <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
+                    Supported formats: TXT, PDF, DOCX (max 50MB)
+                </p>
+            </div>
+        </div>
+        
+        <!-- Documents Tab -->
+        <div id="documents-tab" class="tab-content">
+            <h2>📚 Document Library</h2>
+            {% if doc_structure %}
+                <div class="document-list">
+                    {% for folder, files in doc_structure.items() %}
+                        <div class="folder-card">
+                            <div class="folder-name">📁 {{ folder }}</div>
+                            {% for file in files %}
+                                <div class="file-item">📄 {{ file }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>No documents uploaded yet.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Functions Tab -->
+        <div id="functions-tab" class="tab-content">
+            <h2>⚡ Available Functions</h2>
+            <button onclick="loadFunctions()" style="margin-bottom: 15px;">🔄 Refresh Functions</button>
+            
+            <div id="functions-container">
+                <p>Loading functions...</p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <h3>📖 API Usage</h3>
+                
+                <h4>List all functions:</h4>
+                <div class="api-endpoint">GET /functions</div>
+                
+                <h4>Execute a function:</h4>
+                <div class="api-endpoint">
+POST /run_function
+Content-Type: application/json
+
+{
+  "name": "math/add",
+  "kwargs": {"a": 5, "b": 3}
+}
+                </div>
+                
+                <h4>Use in LLM answers:</h4>
+                <p>Simply include in your answer: <code>&lt;run:math/add a=5 b=3&gt;</code></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function loadFunctions() {
+            fetch('/functions')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('functions-container');
+                    document.getElementById('functions-count').textContent = data.total_functions || 0;
+                    
+                    if (!data.functions || data.functions.length === 0) {
+                        container.innerHTML = '<p>No functions available. Add .py files to the functions/ directory.</p>';
+                        return;
+                    }
+                    
+                    let html = '<div class="functions-list">';
+                    html += `<p style="margin-bottom: 15px;">Last updated: ${data.last_updated || 'Unknown'}</p>`;
+                    
+                    data.functions.forEach(func => {
+                        html += `
+                            <div class="function-card">
+                                <div class="function-name">📦 ${func.name}</div>
+                                <div class="function-params">Parameters: ${func.params.join(', ') || 'none'}</div>
+                                <div class="function-doc">${func.doc}</div>
+                                <div style="margin-top: 5px; font-size: 0.85em; color: #999;">
+                                    ${func.signature}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading functions:', error);
+                    document.getElementById('functions-container').innerHTML = 
+                        '<p style="color: red;">Error loading functions</p>';
+                });
+        }
+        
+        // Load functions on page load
+        window.addEventListener('load', () => {
+            loadFunctions();
+        });
+    </script>
+</body>
+</html>
