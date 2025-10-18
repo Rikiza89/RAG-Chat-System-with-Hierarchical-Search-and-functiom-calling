@@ -1165,8 +1165,9 @@ def ask():
                     answer = re.sub(r'<think>.*?</think>', '', raw_answer, flags=re.DOTALL).strip()
                 
                 # Process answer for function calls
-                answer, function_outputs = process_answer_with_functions(answer, question)
-                
+                # answer, function_outputs = process_answer_with_functions(answer, question)
+                from functions.auto_detector import enhanced_process_answer_with_functions
+                answer, function_outputs = enhanced_process_answer_with_functions(answer, question, function_manager)
             except LLMError as e:
                 logger.error(f"LLM error: {e}")
                 answer = f"Error generating answer: {str(e)}"
