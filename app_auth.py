@@ -21,6 +21,12 @@ from pathlib import Path
 from functions_manager import get_function_manager
 from functions_watcher import start_functions_watcher
 
+from flask_login import login_user, logout_user, login_required, current_user
+from auth import User, init_login_manager, permission_required, document_access_required, create_default_admin
+from database import (get_db, close_db, init_db, add_document, log_query, 
+                     log_function_execution, get_user_documents, log_access,
+                     save_index_metadata, backup_database, get_system_stats)
+import time
 # ================= CONFIG ==================
 DEFAULT_DOCS_FOLDER = "documents"
 UPLOAD_FOLDER = "uploaded_docs"
@@ -111,6 +117,20 @@ logger = logging.getLogger(__name__)
 
 # ================= FLASK APP =================
 app = Flask(__name__)
+# Initialize database
+init_db()
+
+# Initialize authentication
+login_manager = init_login_manager(app)
+
+# Register database teardown
+app.teardown_appcontext(close_db)
+
+# Create default admin if none exists
+with app.app_context():
+    db = get_db()
+    create_default_admin(db)
+
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key-change-in-production")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
@@ -1037,9 +1057,125 @@ def start_watcher():
         observer.stop()
     observer.join()
 
-# ================= FLASK ROUTES =================
+# ============ new routes =============
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        db = get_db()
+        user = User.authenticate(username, password, db)
+        
+        if user:
+            login_user(user, remember=True)
+            
+            # Log successful login
+            cursor = db.cursor()
+            cursor.execute("UPDATE users SET last_login = ? WHERE id = ?", 
+                         (datetime.now(), user.id))
+            db.commit()
+            
+            log_access(user.id, 'login', 'system', db)
+            
+            flash(f"Welcome back, {user.username}!", "success")
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+        else:
+            flash("Invalid username or password", "error")
+    
+    return render_template("login.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    """Logout"""
+    db = get_db()
+    log_access(current_user.id, 'logout', 'system', db)
+    logout_user()
+    flash("You have been logged out", "success")
+    return redirect(url_for("login"))
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Register new user"""
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    
+    if request.method == "POST":
+        username = request.form.get("username")
+        email = request.form.get("email")
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+        
+        if password != confirm_password:
+            flash("Passwords do not match", "error")
+            return render_template("register.html")
+        
+        db = get_db()
+        
+        try:
+            user = User.create(username, email, password, role='user', db=db)
+            flash(f"Account created successfully! Please login.", "success")
+            return redirect(url_for("login"))
+        except sqlite3.IntegrityError:
+            flash("Username or email already exists", "error")
+    
+    return render_template("register.html")
+
+
+@app.route("/profile")
+@login_required
+def profile():
+    """User profile page"""
+    db = get_db()
+    
+    from auth import get_user_stats
+    stats = get_user_stats(current_user.id, db)
+    
+    from database import get_user_queries, get_user_documents_stats
+    recent_queries = get_user_queries(current_user.id, limit=5, db=db)
+    doc_stats = get_user_documents_stats(current_user.id, db)
+    
+    return render_template("profile.html", 
+                         stats=stats, 
+                         recent_queries=recent_queries,
+                         doc_stats=doc_stats)
+
+
+@app.route("/admin")
+@login_required
+@permission_required('manage_users')
+def admin_panel():
+    """Admin panel"""
+    db = get_db()
+    
+    # Get all users
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT id, username, email, role, created_at, last_login, is_active
+        FROM users
+        ORDER BY created_at DESC
+    """)
+    users = cursor.fetchall()
+    
+    # Get system stats
+    stats = get_system_stats(db)
+    
+    return render_template("admin.html", users=users, stats=stats)
+
+
+# ================= FLASK ROUTES =================
+# MODIFY @app.route("/", methods=["GET", "POST"])
 @app.route("/", methods=["GET", "POST"])
+@login_required  # ADD THIS
 def index():
     """Main page with upload and document list"""
     if request.method == "POST":
@@ -1059,21 +1195,27 @@ def index():
                 flash(f"File type not allowed. Use: {', '.join(ALLOWED_EXTENSIONS)}", "error")
                 return redirect(request.url)
             
-            # Sanitize and create folder
+            # Sanitize and create folder (with user isolation)
             folder_name = sanitize_folder_name(folder_name) or "general"
-            target_folder = os.path.join(UPLOAD_FOLDER, folder_name)
+            # ADD: Store in user-specific folder
+            target_folder = os.path.join(UPLOAD_FOLDER, current_user.username, folder_name)
             os.makedirs(target_folder, exist_ok=True)
             
             # Save file
             filename = secure_filename(file.filename)
             filepath = os.path.join(target_folder, filename)
             
-            # Check if file already exists
             if os.path.exists(filepath):
-                flash(f"File '{filename}' already exists in folder '{folder_name}'", "warning")
+                flash(f"File '{filename}' already exists", "warning")
                 return redirect(url_for("index"))
             
             file.save(filepath)
+            
+            # ADD: Save to database
+            db = get_db()
+            add_document(filepath, filename, folder_name, current_user.id, db)
+            log_access(current_user.id, 'upload_document', filepath, db)
+            
             flash(f"Uploaded '{filename}' to folder '{folder_name}'", "success")
             
             # Trigger rebuild
@@ -1085,15 +1227,29 @@ def index():
         
         return redirect(url_for("index"))
     
-    # GET request - show document structure
+    # GET request - show user's documents only
     try:
-        doc_structure = {}
-        for base_folder in [DEFAULT_DOCS_FOLDER, UPLOAD_FOLDER]:
-            structure = scan_folder_structure(base_folder)
-            base_name = "Default" if base_folder == DEFAULT_DOCS_FOLDER else "Uploaded"
-            for folder, docs in structure.items():
-                key = f"{base_name}_{folder}"
-                doc_structure[key] = list(docs.keys())
+        db = get_db()
+        
+        # Get documents accessible to current user
+        if current_user.role == 'admin':
+            # Admins see all documents
+            doc_structure = {}
+            for base_folder in [DEFAULT_DOCS_FOLDER, UPLOAD_FOLDER]:
+                structure = scan_folder_structure(base_folder)
+                base_name = "Default" if base_folder == DEFAULT_DOCS_FOLDER else "Uploaded"
+                for folder, docs in structure.items():
+                    key = f"{base_name}_{folder}"
+                    doc_structure[key] = list(docs.keys())
+        else:
+            # Regular users see only their documents
+            user_folder = os.path.join(UPLOAD_FOLDER, current_user.username)
+            if os.path.exists(user_folder):
+                structure = scan_folder_structure(user_folder)
+                doc_structure = {f"My_{folder}": list(docs.keys()) 
+                               for folder, docs in structure.items()}
+            else:
+                doc_structure = {}
         
         return render_template(
             "index.html",
@@ -1107,18 +1263,16 @@ def index():
     except Exception as e:
         logger.error(f"Error rendering index: {e}")
         flash("Error loading documents", "error")
-        return render_template(
-            "index.html",
-            doc_structure={},
-            last_index_update=None,
-            index_stats={},
-            current_strategy=PROMPT_STRATEGY,
-            available_strategies=list(PROMPT_TEMPLATES.keys())
-        )
+        return render_template("index.html", doc_structure={})
 
+
+# MODIFY @app.route("/ask", methods=["POST"])
 @app.route("/ask", methods=["POST"])
+@login_required  # ADD THIS
 def ask():
     """Handle question answering with function execution support"""
+    start_time = time.time()
+    
     try:
         question = request.form.get("question", "").strip()
         strategy = request.form.get("strategy", PROMPT_STRATEGY)
@@ -1131,15 +1285,25 @@ def ask():
             flash("Question too long (max 1000 characters)", "error")
             return redirect(url_for("index"))
         
-        # Retrieve relevant chunks
-        logger.info(f"Processing question: {question[:100]}...")
+        # Retrieve relevant chunks (filter by user access)
+        logger.info(f"User {current_user.username} asking: {question[:100]}...")
         retrieved = retrieve_hierarchical(question)
         
+        # ADD: Filter results by document access
+        db = get_db()
+        filtered_retrieved = []
+        for r in retrieved:
+            doc_path = f"{r['folder']}/{r['filename']}"
+            if current_user.can_access_document(doc_path, db):
+                filtered_retrieved.append(r)
+        
+        retrieved = filtered_retrieved
+        
         if not retrieved:
-            answer = "No relevant documents found. Please upload documents first."
+            answer = "No relevant documents found that you have access to."
             thinking = ""
             sources = []
-            function_outputs = []  # Initialize empty list
+            function_outputs = []
         else:
             # Build context from retrieved chunks
             context = "\n\n".join([
@@ -1148,7 +1312,7 @@ def ask():
             ])
             
             # Generate prompt
-            # prompt = generate_prompt(context, question, strategy)
+            #prompt = generate_prompt(context, question, strategy)
             prompt = generate_prompt_with_functions(context, question, strategy)
             
             # Call LLM
@@ -1165,9 +1329,22 @@ def ask():
                     answer = re.sub(r'<think>.*?</think>', '', raw_answer, flags=re.DOTALL).strip()
                 
                 # Process answer for function calls
-                # answer, function_outputs = process_answer_with_functions(answer, question)
+                #answer, function_outputs = process_answer_with_functions(answer, question)
                 from functions.auto_detector import enhanced_process_answer_with_functions
                 answer, function_outputs = enhanced_process_answer_with_functions(answer, question, function_manager)
+        
+                # ADD: Log function executions to database
+                for func_output in function_outputs:
+                    log_function_execution(
+                        current_user.id,
+                        func_output['function'],
+                        func_output.get('args', {}),
+                        func_output.get('result', ''),
+                        func_output['status'],
+                        0,  # execution time
+                        db
+                    )
+                
             except LLMError as e:
                 logger.error(f"LLM error: {e}")
                 answer = f"Error generating answer: {str(e)}"
@@ -1188,14 +1365,28 @@ def ask():
                     "score": r["score"]
                 })
         
-        # Get document structure for display
-        doc_structure = {}
-        for base_folder in [DEFAULT_DOCS_FOLDER, UPLOAD_FOLDER]:
-            structure = scan_folder_structure(base_folder)
-            base_name = "Default" if base_folder == DEFAULT_DOCS_FOLDER else "Uploaded"
-            for folder, docs in structure.items():
-                key = f"{base_name}_{folder}"
-                doc_structure[key] = list(docs.keys())
+        # ADD: Log query to database
+        response_time = time.time() - start_time
+        log_query(current_user.id, question, strategy, response_time, len(retrieved), db)
+        log_access(current_user.id, 'query', question[:100], db)
+        
+        # Get document structure for display (user-specific)
+        if current_user.role == 'admin':
+            doc_structure = {}
+            for base_folder in [DEFAULT_DOCS_FOLDER, UPLOAD_FOLDER]:
+                structure = scan_folder_structure(base_folder)
+                base_name = "Default" if base_folder == DEFAULT_DOCS_FOLDER else "Uploaded"
+                for folder, docs in structure.items():
+                    key = f"{base_name}_{folder}"
+                    doc_structure[key] = list(docs.keys())
+        else:
+            user_folder = os.path.join(UPLOAD_FOLDER, current_user.username)
+            if os.path.exists(user_folder):
+                structure = scan_folder_structure(user_folder)
+                doc_structure = {f"My_{folder}": list(docs.keys()) 
+                               for folder, docs in structure.items()}
+            else:
+                doc_structure = {}
         
         return render_template(
             "index.html",
@@ -1215,6 +1406,126 @@ def ask():
         logger.error(f"Error in ask route: {e}")
         flash(f"Error processing question: {str(e)}", "error")
         return redirect(url_for("index"))
+
+
+# MODIFY @app.route("/doc/<path:doc_path>")
+@app.route("/doc/<path:doc_path>")
+@login_required  # ADD THIS
+@document_access_required  # ADD THIS
+def serve_doc(doc_path):
+    """Serve document files (with access control)"""
+    try:
+        db = get_db()
+        
+        # Log document access
+        log_access(current_user.id, 'download_document', doc_path, db)
+        
+        # Parse path
+        parts = doc_path.split("/", 1)
+        if len(parts) != 2:
+            flash("Invalid document path", "error")
+            return redirect(url_for("index"))
+        
+        base_and_folder, filename = parts
+        
+        # Determine base folder
+        if base_and_folder.startswith("Default_"):
+            base_folder = DEFAULT_DOCS_FOLDER
+            subfolder = base_and_folder[8:]
+        elif base_and_folder.startswith("Uploaded_"):
+            base_folder = UPLOAD_FOLDER
+            subfolder = base_and_folder[9:]
+        elif base_and_folder.startswith("My_"):
+            # User's own folder
+            base_folder = os.path.join(UPLOAD_FOLDER, current_user.username)
+            subfolder = base_and_folder[3:]
+        else:
+            flash("Invalid folder path", "error")
+            return redirect(url_for("index"))
+        
+        folder_path = os.path.join(base_folder, subfolder)
+        
+        if not os.path.exists(folder_path):
+            flash("Folder not found", "error")
+            return redirect(url_for("index"))
+        
+        return send_from_directory(folder_path, filename, as_attachment=True)
+    
+    except Exception as e:
+        logger.error(f"Error serving document: {e}")
+        flash("Error accessing document", "error")
+        return redirect(url_for("index"))
+
+@app.route("/api/user/stats")
+@login_required
+def user_stats():
+    """Get user statistics (API)"""
+    try:
+        db = get_db()
+        from auth import get_user_stats
+        from database import get_user_documents_stats
+        
+        stats = get_user_stats(current_user.id, db)
+        doc_stats = get_user_documents_stats(current_user.id, db)
+        
+        return jsonify({
+            "user_id": current_user.id,
+            "username": current_user.username,
+            "role": current_user.role,
+            "stats": stats,
+            "documents": {
+                "total": doc_stats[0] if doc_stats else 0,
+                "total_size": doc_stats[1] if doc_stats else 0,
+                "total_chunks": doc_stats[2] if doc_stats else 0,
+                "indexed": doc_stats[3] if doc_stats else 0
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ADD: Admin route to grant document access
+@app.route("/admin/grant_access", methods=["POST"])
+@login_required
+@permission_required('manage_users')
+def grant_access():
+    """Grant user access to document"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        document_path = data.get('document_path')
+        
+        db = get_db()
+        from auth import grant_document_access
+        
+        grant_document_access(user_id, document_path, current_user.id, db)
+        
+        return jsonify({"status": "success", "message": "Access granted"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ADD: Backup route
+@app.route("/admin/backup", methods=["POST"])
+@login_required
+@permission_required('manage_users')
+def create_backup():
+    """Create system backup"""
+    try:
+        backup_path = backup_database()
+        
+        db = get_db()
+        log_access(current_user.id, 'create_backup', backup_path, db)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Backup created",
+            "path": backup_path
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route("/health")
 def health():
@@ -1239,43 +1550,6 @@ def health():
         return jsonify(status)
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)}), 500
-
-@app.route("/doc/<path:doc_path>")
-def serve_doc(doc_path):
-    """Serve document files"""
-    try:
-        # Parse path: base_folder_name/filename
-        parts = doc_path.split("/", 1)
-        if len(parts) != 2:
-            flash("Invalid document path", "error")
-            return redirect(url_for("index"))
-        
-        base_and_folder, filename = parts
-        
-        # Determine base folder
-        if base_and_folder.startswith("Default_"):
-            base_folder = DEFAULT_DOCS_FOLDER
-            subfolder = base_and_folder[8:]  # Remove "Default_"
-        elif base_and_folder.startswith("Uploaded_"):
-            base_folder = UPLOAD_FOLDER
-            subfolder = base_and_folder[9:]  # Remove "Uploaded_"
-        else:
-            flash("Invalid folder path", "error")
-            return redirect(url_for("index"))
-        
-        # Build full path
-        folder_path = os.path.join(base_folder, subfolder)
-        
-        if not os.path.exists(folder_path):
-            flash("Folder not found", "error")
-            return redirect(url_for("index"))
-        
-        return send_from_directory(folder_path, filename, as_attachment=True)
-    
-    except Exception as e:
-        logger.error(f"Error serving document: {e}")
-        flash("Error accessing document", "error")
-        return redirect(url_for("index"))
 
 @app.route("/stats")
 def stats():
@@ -1473,11 +1747,16 @@ def startup_checks():
     
     logger.info("=" * 60)
 
+
 if __name__ == "__main__":
     try:
         # Initialize folders
         initialize_folders()
         startup_checks()
+        
+        # Initialize database
+        print("Initializing database...")
+        init_db()
         
         # Initialize function manager
         logger.info("Initializing function manager...")
@@ -1490,11 +1769,18 @@ if __name__ == "__main__":
         try:
             rebuild_index()
             logger.info("✓ Initial index built successfully")
+            
+            # Save index metadata to database
+            with app.app_context():
+                db = get_db()
+                save_index_metadata(
+                    total_chunks=len(global_chunks),
+                    total_documents=len(set(m['filename'] for m in chunk_metadata)),
+                    embedding_model="paraphrase-multilingual-MiniLM-L12-v2",
+                    db=db
+                )
         except IndexBuildError as e:
             logger.error(f"Failed to build initial index: {e}")
-            logger.warning("System will start without index. Upload documents to create index.")
-        except Exception as e:
-            logger.error(f"Unexpected error during index build: {e}")
         
         # Start document folder watcher
         doc_watcher_thread = threading.Thread(target=start_watcher, daemon=True)
@@ -1505,18 +1791,21 @@ if __name__ == "__main__":
         functions_observer = start_functions_watcher(function_manager)
         logger.info("✓ Functions watcher started")
         
-        # Print function summary
-        if func_count > 0:
-            logger.info("\n" + "="*60)
-            logger.info("Available Functions:")
-            for func_name in sorted(function_manager.function_registry.keys()):
-                func_data = function_manager.function_registry[func_name]
-                logger.info(f"  • {func_name} {func_data['signature']}")
-            logger.info("="*60 + "\n")
+        # Print startup info
+        logger.info("\n" + "="*60)
+        logger.info("RAG System Started")
+        logger.info("="*60)
+        logger.info(f"Functions loaded: {func_count}")
+        logger.info(f"Documents indexed: {len(set(m['filename'] for m in chunk_metadata)) if chunk_metadata else 0}")
+        logger.info(f"Total chunks: {len(global_chunks) if global_chunks else 0}")
+        logger.info("="*60)
         
         # Start Flask app
-        logger.info("Starting Flask server on http://0.0.0.0:5000")
-        logger.info("Press Ctrl+C to stop")
+        logger.info("\nStarting Flask server on http://0.0.0.0:5000")
+        logger.info("Default admin: username=admin, password=admin123")
+        logger.info("⚠️  CHANGE ADMIN PASSWORD AFTER FIRST LOGIN!")
+        logger.info("\nPress Ctrl+C to stop")
+        
         app.run(debug=False, host="0.0.0.0", port=5000, threaded=True)
     
     except KeyboardInterrupt:
@@ -1527,4 +1816,3 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         raise
-    
