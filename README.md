@@ -79,14 +79,14 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
-│                           WEB INTERFACE (FLASK)                            │
-│                                                                            │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│   │   Upload    │  │    Query    │  │  Functions  │  │    Admin    │   │
-│   │  Documents  │  │   Search    │  │     Tab     │  │    Panel    │   │
-│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
-│                                                                            │
-└───────┬────────────────────┬──────────────────┬────────────────┬─────────┘
+│                           WEB INTERFACE (FLASK)                           │
+│                                                                           │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│   │   Upload    │  │    Query    │  │  Functions  │  │    Admin    │      │
+│   │  Documents  │  │   Search    │  │     Tab     │  │    Panel    │      │
+│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘      │
+│                                                                           │
+└───────┬────────────────────┬──────────────────┬────────────────┬──────────┘
         │                    │                  │                │
         ▼                    ▼                  ▼                ▼
 ┌───────────────┐   ┌─────────────────────────────────┐   ┌─────────────┐
@@ -123,8 +123,8 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 └───────┬───────┘   │  │   OLLAMA / LLM            │  │   └──────┬──────┘
         │           │  │   • Local Inference       │  │          │
         │           │  │   • Multiple Models       │  │          │
-   INDEX BUILD    │  │   • Privacy Focused       │  │    EXECUTION
-   (Watchdog)     │  └────────────┬──────────────┘  │          │
+   INDEX BUILD      │  │   • Privacy Focused       │  │      EXECUTION
+   (Watchdog)       │  └────────────┬──────────────┘  │          │
         │           │               │                 │          │
         │           │               ▼                 │          │
         │           │  ┌───────────────────────────┐  │          │
@@ -150,7 +150,7 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         DOCUMENT UPLOAD FLOW                         │
+│                         DOCUMENT UPLOAD FLOW                        │
 └─────────────────────────────────────────────────────────────────────┘
 
 User Uploads File
@@ -163,7 +163,7 @@ User Uploads File
 
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          QUERY FLOW                                  │
+│                          QUERY FLOW                                 │
 └─────────────────────────────────────────────────────────────────────┘
 
 User Asks Question
@@ -192,7 +192,7 @@ User Asks Question
 
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      FUNCTION AUTO-LOAD FLOW                         │
+│                      FUNCTION AUTO-LOAD FLOW                        │
 └─────────────────────────────────────────────────────────────────────┘
 
 User Adds *.py File
@@ -216,29 +216,29 @@ User Adds *.py File
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                       FLASK APPLICATION                           │
-│                                                                   │
-│  ┌────────────┐     ┌────────────┐     ┌────────────┐          │
-│  │  Routes    │     │ Templates  │     │   Static   │          │
-│  │            │     │            │     │            │          │
-│  │ • /        │     │ • index    │     │ • CSS      │          │
-│  │ • /ask     │     │ • login    │     │ • JS       │          │
-│  │ • /login   │     │ • admin    │     │            │          │
-│  └─────┬──────┘     └────────────┘     └────────────┘          │
-│        │                                                         │
-│        ▼                                                         │
-│  ┌───────────────────────────────────────────────────────┐     │
-│  │         BUSINESS LOGIC LAYER                          │     │
-│  │                                                        │     │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │     │
-│  │  │ RAG Core │  │ Function │  │   Auth   │           │     │
-│  │  │          │  │  Manager │  │(Optional)│           │     │
-│  │  │ • Index  │  │          │  │          │           │     │
-│  │  │ • Search │  │ • Load   │  │ • Login  │           │     │
-│  │  │ • Embed  │  │ • Execute│  │ • Roles  │           │     │
-│  │  │ • LLM    │  │ • Log    │  │ • Access │           │     │
-│  │  └──────────┘  └──────────┘  └──────────┘           │     │
-│  └───────────────────────────────────────────────────────┘     │
+│                       FLASK APPLICATION                          │
+│                                                                  │
+│    ┌────────────┐     ┌────────────┐     ┌────────────┐          │
+│    │  Routes    │     │ Templates  │     │   Static   │          │
+│    │            │     │            │     │            │          │
+│    │ • /        │     │ • index    │     │ • CSS      │          │
+│    │ • /ask     │     │ • login    │     │ • JS       │          │
+│    │ • /login   │     │ • admin    │     │            │          │
+│    └─────┬──────┘     └────────────┘     └────────────┘          │
+│          │                                                       │
+│          ▼                                                       │
+│  ┌───────────────────────────────────────────────────────┐       │
+│  │                 BUSINESS LOGIC LAYER                  │       │  
+│  │                                                       │       │
+│  │      ┌──────────┐  ┌──────────┐  ┌──────────┐         │       │
+│  │      │ RAG Core │  │ Function │  │   Auth   │         │       │
+│  │      │          │  │  Manager │  │(Optional)│         │       │
+│  │      │ • Index  │  │          │  │          │         │       │
+│  │      │ • Search │  │ • Load   │  │ • Login  │         │       │
+│  │      │ • Embed  │  │ • Execute│  │ • Roles  │         │       │
+│  │      │ • LLM    │  │ • Log    │  │ • Access │         │       │
+│  │      └──────────┘  └──────────┘  └──────────┘         │       │
+│  └───────────────────────────────────────────────────────┘       │
 └──────────────────────────────────────────────────────────────────┘
          │                  │                  │
          ▼                  ▼                  ▼
@@ -280,42 +280,42 @@ User Adds *.py File
 
 ```
 ┌───────────────────────────────────────────────────────────┐
-│                    SECURITY LAYERS                         │
-│                                                            │
-│  Layer 1: Authentication                                   │
-│  ┌──────────────────────────────────────────────────┐    │
-│  │ • Flask-Login Session Management                 │    │
-│  │ • Password Hashing (SHA256)                      │    │
-│  │ • Role-Based Access Control (admin/user/viewer) │    │
-│  │ • Session Timeout                                │    │
-│  └──────────────────────────────────────────────────┘    │
-│                          │                                 │
-│                          ▼                                 │
-│  Layer 2: Authorization                                    │
-│  ┌──────────────────────────────────────────────────┐    │
-│  │ • @login_required Decorators                     │    │
-│  │ • @permission_required Checks                    │    │
-│  │ • Document Access Control Lists                  │    │
-│  │ • API Token Validation                           │    │
-│  └──────────────────────────────────────────────────┘    │
-│                          │                                 │
-│                          ▼                                 │
-│  Layer 3: Data Isolation                                   │
-│  ┌──────────────────────────────────────────────────┐    │
-│  │ • User-Specific Folders (uploaded_docs/user/)    │    │
-│  │ • Document Ownership Tracking                    │    │
-│  │ • Query Result Filtering                         │    │
-│  │ • Explicit Sharing Model (grant/revoke)         │    │
-│  └──────────────────────────────────────────────────┘    │
-│                          │                                 │
-│                          ▼                                 │
-│  Layer 4: Audit Trail                                      │
-│  ┌──────────────────────────────────────────────────┐    │
-│  │ • All Actions Logged (access_log table)         │    │
-│  │ • Timestamped Entries                            │    │
-│  │ • IP Address Tracking                            │    │
-│  │ • Function Execution Logs                        │    │
-│  └──────────────────────────────────────────────────┘    │
+│                    SECURITY LAYERS                        │
+│                                                           │
+│  Layer 1: Authentication                                  │
+│   ┌──────────────────────────────────────────────────┐    │
+│   │ • Flask-Login Session Management                 │    │
+│   │ • Password Hashing (SHA256)                      │    │
+│   │ • Role-Based Access Control (admin/user/viewer)  │    │
+│   │ • Session Timeout                                │    │
+│   └──────────────────────────────────────────────────┘    │
+│                          │                                │
+│                          ▼                                │
+│  Layer 2: Authorization                                   │
+│   ┌──────────────────────────────────────────────────┐    │
+│   │ • @login_required Decorators                     │    │
+│   │ • @permission_required Checks                    │    │
+│   │ • Document Access Control Lists                  │    │
+│   │ • API Token Validation                           │    │
+│   └──────────────────────────────────────────────────┘    │
+│                          │                                │
+│                          ▼                                │
+│  Layer 3: Data Isolation                                  │
+│   ┌──────────────────────────────────────────────────┐    │
+│   │ • User-Specific Folders (uploaded_docs/user/)    │    │
+│   │ • Document Ownership Tracking                    │    │
+│   │ • Query Result Filtering                         │    │
+│   │ • Explicit Sharing Model (grant/revoke)          │    │
+│   └──────────────────────────────────────────────────┘    │
+│                          │                                │
+│                          ▼                                │
+│  Layer 4: Audit Trail                                     │
+│   ┌──────────────────────────────────────────────────┐    │
+│   │ • All Actions Logged (access_log table)          │    │
+│   │ • Timestamped Entries                            │    │
+│   │ • IP Address Tracking                            │    │
+│   │ • Function Execution Logs                        │    │
+│   └──────────────────────────────────────────────────┘    │
 └───────────────────────────────────────────────────────────┘
 ```
 
