@@ -343,39 +343,56 @@ pip install -r requirements.txt
 ```
 
 **requirements.txt:**
+
+these packages were all tested ONLY in python 3.11.19 version.
+
 ```txt
-# Core Dependencies
+# Core Flask Dependencies
 flask>=2.0.0
-sentence-transformers>=2.2.0
-faiss-cpu>=1.7.0
-PyMuPDF>=1.23.0
-python-docx>=0.8.11
-watchdog>=3.0.0
-werkzeug>=2.0.0
-numpy>=1.21.0
+werkzeug
+
+# Machine Learning & Embeddings
+sentence-transformers
+torch
+transformers
+
+# Vector Store
+faiss-cpu
+numpy
+
+# Document Processing
+PyMuPDF
+python-docx
 
 # Office Document Processing
-pandas>=1.3.0
-openpyxl>=3.0.0
-xlsxwriter>=3.0.0
-beautifulsoup4>=4.10.0
-lxml>=4.9.0
-python-pptx>=0.6.21
+pandas
+openpyxl
+xlsxwriter
+beautifulsoup4
+lxml
+python-pptx
 
 # Advanced Problem Solving
-scipy>=1.7.0
+scipy
+
+# File System Monitoring
+watchdog
+
+# Utilities
+Pillow
+requests
 
 # Optional: Authentication
 Flask-Login>=0.6.0
 
 # Optional: Production
-gunicorn>=21.2.0
-Flask-Limiter>=3.0.0
-Flask-Talisman>=1.0.0
+gunicorn
+Flask-Limiter
+Flask-Talisman
 
-# Optional: Development
-pytest>=7.4.3
-pytest-flask>=1.3.0
+# Optional: Testing
+pytest
+pytest-flask
 ```
 
 ### 3. Install Ollama
