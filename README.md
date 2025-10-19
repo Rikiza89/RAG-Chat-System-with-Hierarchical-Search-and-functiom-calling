@@ -82,8 +82,8 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 │                         WEB INTERFACE                            │
 │                    (Flask + HTML Templates)                      │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │ Upload   │  │  Query   │  │Functions │  │  Admin   │       │
-│  │ Documents│  │  Search  │  │   Tab    │  │  Panel   │       │
+│  │ Upload         │  │  Query         │  │Functions       │  │  Admin         │       │
+│  │ Documents.     │  │  Search        │  │   Tab          │  │  Panel         │       │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
 └────────┬────────────────┬─────────────┬──────────────┬─────────┘
          │                │             │              │
