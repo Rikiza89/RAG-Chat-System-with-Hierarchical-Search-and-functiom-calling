@@ -78,208 +78,184 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 ### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         WEB INTERFACE                            │
-│                    (Flask + HTML Templates)                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │ Upload         │  │  Query         │  │Functions       │  │  Admin         │       │
-│  │ Documents.     │  │  Search        │  │   Tab          │  │  Panel         │       │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
-└────────┬────────────────┬─────────────┬──────────────┬─────────┘
-         │                │             │              │
-         ▼                ▼             ▼              ▼
-┌─────────────────┐ ┌──────────────────────────┐ ┌──────────────┐
-│   DOCUMENT      │ │    QUERY PROCESSING      │ │  FUNCTION    │
-│   PROCESSING    │ │                          │ │   SYSTEM     │
-│                 │ │ ┌──────────────────────┐ │ │              │
-│ • File Upload   │ │ │  Sentence Transformer│ │ │ • Dynamic    │
-│ • Text Extract  │ │ │  Embedding Model     │ │ │   Loading    │
-│ • PDF/DOCX/TXT  │ │ └──────────┬───────────┘ │ │ • Hot Reload │
-│ • Chunking      │ │            │             │ │ • Auto-Detect│
-│ • Multi-lang    │ │            ▼             │ │ • 30+ Funcs  │
-└────────┬────────┘ │ ┌──────────────────────┐ │ └──────┬───────┘
-         │          │ │  Two-Stage Retrieval │ │        │
-         │          │ │                      │ │        │
-         │          │ │ 1. Find Top Folders  │ │        │
-         │          │ │ 2. Get Best Chunks   │ │        │
-         │          │ └──────────┬───────────┘ │        │
-         │          │            │             │        │
-         ▼          │            ▼             │        ▼
-┌─────────────────┐ │ ┌──────────────────────┐ │ ┌──────────────┐
-│  FAISS INDEX    │◄┤ │   CONTEXT BUILDING   │ │ │  FUNCTION    │
-│                 │ │ │                      │ │ │  REGISTRY    │
-│ • Vector Store  │ │ │ • Combine Chunks     │ │ │              │
-│ • Hierarchical  │ │ │ • Add Metadata       │ │ │ • Metadata   │
-│ • Fast Search   │ │ │ • Format Context     │ │ │ • Signatures │
-│ • Per-Folder    │ │ └──────────┬───────────┘ │ │ • Auto-Gen   │
-└─────────────────┘ │            │             │ └──────────────┘
-         ▲          │            ▼             │        │
-         │          │ ┌──────────────────────┐ │        │
-         │          │ │   PROMPT GENERATION  │ │        │
-         │          │ │                      │ │        │
-    INDEX BUILD    │ │ • 8 Strategies       │ │   EXECUTION
-    (Watchdog)     │ │ • Template System    │ │        │
-         │          │ │ • Context Injection  │ │        │
-         │          │ └──────────┬───────────┘ │        │
-         │          │            │             │        │
-         │          │            ▼             │        ▼
-         │          │ ┌──────────────────────┐ │ ┌──────────────┐
-         │          │ │    OLLAMA LLM        │ │ │   FUNCTION   │
-         │          │ │                      │ │ │   EXECUTION  │
-         │          │ │ • Local Inference    │ │ │              │
-         │          │ │ • llama3.2/phi3/etc  │ │ │ • Safe Exec  │
-         │          │ │ • No Internet Needed │ │ │ • Logging    │
-         │          │ │ • Privacy Focused    │ │ │ • Error Hand │
-         │          │ └──────────┬───────────┘ │ └──────┬───────┘
-         │          │            │             │        │
-         │          │            ▼             │        │
-         │          │ ┌──────────────────────┐ │        │
-         │          │ │   ANSWER PROCESSING  │◄┼────────┘
-         │          │ │                      │ │
-         │          │ │ • Parse Response     │ │
-         │          │ │ • Detect Functions   │ │
-         │          │ │ • Execute Functions  │ │
-         │          │ │ • Integrate Results  │ │
-         │          │ └──────────┬───────────┘ │
-         │          └────────────┼─────────────┘
-         │                       │
-         │                       ▼
-         │          ┌──────────────────────────┐
-         │          │   OPTIONAL DATABASE      │
-         │          │      (SQLite)            │
-         │          │                          │
-         │          │ • User Management        │
-         │          │ • Document Metadata      │
-         │          │ • Query History          │
-         │          │ • Function Logs          │
-         │          │ • Access Control         │
-         │          │ • Audit Trail            │
-         │          └──────────────────────────┘
-         │
-         └──────────────────────────────────────────────┐
-                                                        │
-                    ┌───────────────────────────────────┘
-                    ▼
-         ┌─────────────────────┐
-         │   FILE WATCHERS     │
-         │                     │
-         │ • Document Folder   │
-         │ • Functions Folder  │
-         │ • 2s Debounce       │
-         │ • Auto Rebuild      │
-         └─────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                           WEB INTERFACE (FLASK)                            │
+│                                                                            │
+│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
+│   │   Upload    │  │    Query    │  │  Functions  │  │    Admin    │   │
+│   │  Documents  │  │   Search    │  │     Tab     │  │    Panel    │   │
+│   └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘   │
+│                                                                            │
+└───────┬────────────────────┬──────────────────┬────────────────┬─────────┘
+        │                    │                  │                │
+        ▼                    ▼                  ▼                ▼
+┌───────────────┐   ┌─────────────────────────────────┐   ┌─────────────┐
+│   DOCUMENT    │   │    QUERY PROCESSING             │   │  FUNCTION   │
+│  PROCESSING   │   │                                 │   │   SYSTEM    │
+│               │   │  ┌───────────────────────────┐  │   │             │
+│ • Upload      │   │  │ Sentence Transformers     │  │   │ • Dynamic   │
+│ • Extract     │   │  │ Embedding Model           │  │   │   Loading   │
+│ • Parse       │   │  └────────────┬──────────────┘  │   │ • Hot       │
+│ • Chunk       │   │               │                 │   │   Reload    │
+│ • Multi-lang  │   │               ▼                 │   │ • Auto      │
+│               │   │  ┌───────────────────────────┐  │   │   Detect    │
+└───────┬───────┘   │  │  Two-Stage Retrieval      │  │   │ • 30+       │
+        │           │  │  1. Find Top Folders      │  │   │   Functions │
+        │           │  │  2. Get Best Chunks       │  │   │             │
+        │           │  └────────────┬──────────────┘  │   └──────┬──────┘
+        │           │               │                 │          │
+        │           │               ▼                 │          │
+        │           │  ┌───────────────────────────┐  │          │
+        │           │  │   Context Building        │  │          │
+        │           │  │   • Combine Chunks        │  │          │
+        │           │  │   • Add Metadata          │  │          │
+        │           │  └────────────┬──────────────┘  │          │
+        │           │               │                 │          │
+        ▼           │               ▼                 │          ▼
+┌───────────────┐   │  ┌───────────────────────────┐  │   ┌─────────────┐
+│  FAISS INDEX  │◄──┤  │   Prompt Generation       │  │   │  FUNCTION   │
+│               │   │  │   • 8 Strategies          │  │   │  REGISTRY   │
+│ • Vectors     │   │  │   • Templates             │  │   │             │
+│ • Metadata    │   │  └────────────┬──────────────┘  │   │ • Metadata  │
+│ • Hierarchic  │   │               │                 │   │ • Params    │
+│ • Per-Folder  │   │               ▼                 │   │ • Docs      │
+│               │   │  ┌───────────────────────────┐  │   │             │
+└───────┬───────┘   │  │   OLLAMA / LLM            │  │   └──────┬──────┘
+        │           │  │   • Local Inference       │  │          │
+        │           │  │   • Multiple Models       │  │          │
+   INDEX BUILD    │  │   • Privacy Focused       │  │    EXECUTION
+   (Watchdog)     │  └────────────┬──────────────┘  │          │
+        │           │               │                 │          │
+        │           │               ▼                 │          │
+        │           │  ┌───────────────────────────┐  │          │
+        │           │  │   Answer Processing       │◄─┼──────────┘
+        │           │  │   • Parse Response        │  │
+        │           │  │   • Detect Functions      │  │
+        │           │  │   • Execute & Integrate   │  │
+        │           │  └───────────────────────────┘  │
+        │           └─────────────────────────────────┘
+        │
+        │           ┌─────────────────────────────────┐
+        └───────────┤   OPTIONAL DATABASE (SQLite)    │
+                    │   • Users                       │
+                    │   • Documents Metadata          │
+                    │   • Query History               │
+                    │   • Function Logs               │
+                    │   • Access Control              │
+                    │   • Audit Trail                 │
+                    └─────────────────────────────────┘
 ```
 
 ### Data Flow Diagram
 
 ```
-USER ACTION                    SYSTEM PROCESSING                      OUTPUT
-─────────────                  ─────────────────                      ──────
+┌─────────────────────────────────────────────────────────────────────┐
+│                         DOCUMENT UPLOAD FLOW                         │
+└─────────────────────────────────────────────────────────────────────┘
 
-Upload File ──────────┐
-                      │
-                      ├──► Text Extraction ──► Chunking ──► Embedding ──► FAISS Index
-                      │      (PDF/DOCX/TXT)     (300 chars)   (768-dim)    (Hierarchical)
-                      │
-                      └──► Database Entry ─────────────────────────────► Metadata Stored
-                           (with auth)
-
-
-Ask Question ─────────┐
-                      │
-                      ├──► Embed Query ──► Search FAISS ──► Get Top Folders
-                      │     (768-dim)      (Cosine Sim)     (2 folders)
-                      │                                           │
-                      │                                           ▼
-                      │                                    Get Top Chunks
-                      │                                      (3 per folder)
-                      │                                           │
-                      │                                           ▼
-                      ├──► Build Context ◄─────────────────────┘
-                      │     (Combine chunks + metadata)
-                      │
-                      ├──► Generate Prompt ──► Ollama LLM ──► Raw Answer
-                      │     (Strategy-based)     (Local)         │
-                      │                                           │
-                      │                                           ▼
-                      └──► Parse Answer ──► Detect Functions ──► Execute ──► Final Answer
-                           (Auto-detect)    (<run:func>)         (Safe)      (Integrated)
-                                                                     │
-                                                                     ▼
-                                                              Log to Database
-                                                              & function_calls.log
+User Uploads File
+      │
+      ├──► Text Extraction ──► Chunking ──► Embedding ──► FAISS Index
+      │    (PDF/DOCX/TXT)     (300 chars)  (768-dim)    (Hierarchical)
+      │
+      └──► Database Entry ──────────────────────────────► Metadata Stored
+           (with auth only)
 
 
-Add Function ─────────┐
-  (*.py file)         │
-                      ├──► Watchdog Detects ──► Import Module ──► Extract Metadata
-                      │     (2s debounce)        (importlib)       (Signature, Doc)
-                      │                                                  │
-                      │                                                  ▼
-                      └─────────────────────────────────────────► Function Registry
-                                                                   (Auto-generated)
-                                                                         │
-                                                                         ▼
-                                                                   Available in:
-                                                                   • Web Interface
-                                                                   • API Endpoints
-                                                                   • CLI Tool
-                                                                   • Auto-Detection
+┌─────────────────────────────────────────────────────────────────────┐
+│                          QUERY FLOW                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+User Asks Question
+      │
+      ├──► Embed Query ──► Search FAISS ──► Find Top Folders
+      │    (768-dim)       (Cosine Sim)     (TOP_K_FOLDERS = 2)
+      │                                            │
+      │                                            ▼
+      │                                     Get Top Chunks
+      │                                     (TOP_K_CHUNKS = 3)
+      │                                            │
+      │                                            ▼
+      ├──► Build Context ◄─────────────────────────┘
+      │    (Combine chunks + metadata)
+      │
+      ├──► Generate Prompt ──► LLM (Ollama) ──► Raw Answer
+      │    (Strategy-based)    (Local Model)        │
+      │                                              │
+      │                                              ▼
+      └──► Parse Answer ──► Detect Functions ──► Execute ──► Final Answer
+           (Auto-detect)   (<run:func> or       (Safe)      (Integrated)
+                           pattern match)           │
+                                                    ▼
+                                             Log Execution
+                                             (function_calls.log)
+
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                      FUNCTION AUTO-LOAD FLOW                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+User Adds *.py File
+      │
+      ├──► Watchdog Detects ──► Import Module ──► Extract Metadata
+      │    (2-sec debounce)     (importlib)       (Signature, Doc)
+      │                                                  │
+      │                                                  ▼
+      └─────────────────────────────────────────► Function Registry
+                                                   (functions_list.json)
+                                                          │
+                                                          ▼
+                                                   Available in:
+                                                   • Web Interface
+                                                   • REST API
+                                                   • CLI Tool
+                                                   • Auto-Detection
 ```
 
 ### Component Interaction
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                          FLASK APPLICATION                              │
-│                                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                │
-│  │   Routes     │  │  Templates   │  │   Static     │                │
-│  │              │  │              │  │              │                │
-│  │ • /          │  │ • index.html │  │ • CSS/JS     │                │
-│  │ • /ask       │  │ • login.html │  │              │                │
-│  │ • /functions │  │ • admin.html │  │              │                │
-│  └──────┬───────┘  └──────────────┘  └──────────────┘                │
-│         │                                                              │
-│         ▼                                                              │
-│  ┌─────────────────────────────────────────────────────────┐          │
-│  │              BUSINESS LOGIC LAYER                        │          │
-│  │                                                           │          │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │          │
-│  │  │   RAG Core  │  │  Function   │  │    Auth     │     │          │
-│  │  │             │  │   Manager   │  │  (Optional) │     │          │
-│  │  │ • Index     │  │             │  │             │     │          │
-│  │  │ • Search    │  │ • Load      │  │ • Login     │     │          │
-│  │  │ • Embed     │  │ • Execute   │  │ • Roles     │     │          │
-│  │  │ • LLM Call  │  │ • Log       │  │ • Access    │     │          │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘     │          │
-│  └─────────────────────────────────────────────────────────┘          │
-└────────────────────────────────────────────────────────────────────────┘
-         │                      │                      │
-         ▼                      ▼                      ▼
-┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│    FAISS     │      │  Functions   │      │   Database   │
-│    Index     │      │  Directory   │      │   (SQLite)   │
-│              │      │              │      │              │
-│ • Vectors    │      │ • math/      │      │ • Users      │
-│ • Metadata   │      │ • text/      │      │ • Documents  │
-│ • Folders    │      │ • excel/     │      │ • Queries    │
-└──────────────┘      │ • solver/    │      │ • Logs       │
-                      └──────────────┘      └──────────────┘
-         ▲                      ▲                      ▲
-         │                      │                      │
-         │                      │                      │
-    ┌────┴─────┐          ┌────┴─────┐          ┌────┴─────┐
-    │ Sentence │          │ Watchdog │          │  Flask   │
-    │Transform │          │  Events  │          │  Login   │
-    └──────────┘          └──────────┘          └──────────┘
-         ▲                      │
-         │                      │
-         ▼                      ▼
-    ┌──────────┐          ┌──────────┐
-    │ Documents│          │ Hot      │
-    │  Folder  │          │ Reload   │
-    └──────────┘          └──────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       FLASK APPLICATION                           │
+│                                                                   │
+│  ┌────────────┐     ┌────────────┐     ┌────────────┐          │
+│  │  Routes    │     │ Templates  │     │   Static   │          │
+│  │            │     │            │     │            │          │
+│  │ • /        │     │ • index    │     │ • CSS      │          │
+│  │ • /ask     │     │ • login    │     │ • JS       │          │
+│  │ • /login   │     │ • admin    │     │            │          │
+│  └─────┬──────┘     └────────────┘     └────────────┘          │
+│        │                                                         │
+│        ▼                                                         │
+│  ┌───────────────────────────────────────────────────────┐     │
+│  │         BUSINESS LOGIC LAYER                          │     │
+│  │                                                        │     │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐           │     │
+│  │  │ RAG Core │  │ Function │  │   Auth   │           │     │
+│  │  │          │  │  Manager │  │(Optional)│           │     │
+│  │  │ • Index  │  │          │  │          │           │     │
+│  │  │ • Search │  │ • Load   │  │ • Login  │           │     │
+│  │  │ • Embed  │  │ • Execute│  │ • Roles  │           │     │
+│  │  │ • LLM    │  │ • Log    │  │ • Access │           │     │
+│  │  └──────────┘  └──────────┘  └──────────┘           │     │
+│  └───────────────────────────────────────────────────────┘     │
+└──────────────────────────────────────────────────────────────────┘
+         │                  │                  │
+         ▼                  ▼                  ▼
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│  FAISS INDEX   │  │   FUNCTIONS/   │  │   DATABASE     │
+│                │  │                │  │   (SQLite)     │
+│ • Vectors      │  │ • math/        │  │                │
+│ • Metadata     │  │ • text/        │  │ • users        │
+│ • Folders      │  │ • excel/       │  │ • documents    │
+│                │  │ • solver/      │  │ • queries      │
+└────────┬───────┘  └────────┬───────┘  └────────┬───────┘
+         │                   │                   │
+         ▼                   ▼                   ▼
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│  Sentence      │  │   Watchdog     │  │  Flask-Login   │
+│  Transformers  │  │   File Watch   │  │   Sessions     │
+└────────────────┘  └────────────────┘  └────────────────┘
 ```
 
 ### Technology Stack
@@ -291,6 +267,7 @@ Add Function ─────────┐
 | **Embeddings** | Sentence Transformers | Text vectorization |
 | **Vector DB** | FAISS | Similarity search |
 | **LLM** | Ollama (llama3.2, phi3, etc) | Answer generation |
+| **Alt LLM** | LM Studio / Transformers / OpenAI | Alternative backends |
 | **Auth** | Flask-Login (optional) | User management |
 | **Database** | SQLite (optional) | Metadata storage |
 | **File Watch** | Watchdog | Hot reload |
@@ -302,45 +279,47 @@ Add Function ─────────┐
 ### Security Architecture (with auth)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    SECURITY LAYERS                           │
-│                                                              │
-│  Layer 1: Authentication                                     │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │ • Flask-Login Session Management                    │    │
-│  │ • Password Hashing (SHA256)                        │    │
-│  │ • Role-Based Access Control                        │    │
-│  │ • Session Timeout                                  │    │
-│  └────────────────────────────────────────────────────┘    │
-│                          │                                   │
-│                          ▼                                   │
-│  Layer 2: Authorization                                      │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │ • @login_required Decorators                       │    │
-│  │ • @permission_required                             │    │
-│  │ • Document Access Control                          │    │
-│  │ • API Token Validation                             │    │
-│  └────────────────────────────────────────────────────┘    │
-│                          │                                   │
-│                          ▼                                   │
-│  Layer 3: Data Isolation                                     │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │ • User-Specific Folders                            │    │
-│  │ • Document Ownership                               │    │
-│  │ • Query Filtering                                  │    │
-│  │ • Explicit Sharing Model                           │    │
-│  └────────────────────────────────────────────────────┘    │
-│                          │                                   │
-│                          ▼                                   │
-│  Layer 4: Audit Trail                                        │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │ • All Actions Logged                               │    │
-│  │ • Timestamped Entries                              │    │
-│  │ • IP Address Tracking                              │    │
-│  │ • Function Execution Logs                          │    │
-│  └────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                    SECURITY LAYERS                         │
+│                                                            │
+│  Layer 1: Authentication                                   │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │ • Flask-Login Session Management                 │    │
+│  │ • Password Hashing (SHA256)                      │    │
+│  │ • Role-Based Access Control (admin/user/viewer) │    │
+│  │ • Session Timeout                                │    │
+│  └──────────────────────────────────────────────────┘    │
+│                          │                                 │
+│                          ▼                                 │
+│  Layer 2: Authorization                                    │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │ • @login_required Decorators                     │    │
+│  │ • @permission_required Checks                    │    │
+│  │ • Document Access Control Lists                  │    │
+│  │ • API Token Validation                           │    │
+│  └──────────────────────────────────────────────────┘    │
+│                          │                                 │
+│                          ▼                                 │
+│  Layer 3: Data Isolation                                   │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │ • User-Specific Folders (uploaded_docs/user/)    │    │
+│  │ • Document Ownership Tracking                    │    │
+│  │ • Query Result Filtering                         │    │
+│  │ • Explicit Sharing Model (grant/revoke)         │    │
+│  └──────────────────────────────────────────────────┘    │
+│                          │                                 │
+│                          ▼                                 │
+│  Layer 4: Audit Trail                                      │
+│  ┌──────────────────────────────────────────────────┐    │
+│  │ • All Actions Logged (access_log table)         │    │
+│  │ • Timestamped Entries                            │    │
+│  │ • IP Address Tracking                            │    │
+│  │ • Function Execution Logs                        │    │
+│  └──────────────────────────────────────────────────┘    │
+└───────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ---
 
