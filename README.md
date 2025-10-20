@@ -39,7 +39,7 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 - 🔄 **Workflow Orchestration** - Complex workflow planning with visualization
 - 🎯 **Decision Analysis** - Multi-criteria decision making with sensitivity analysis
 
-### Optional Authentication (NEW!)
+### Optional Authentication
 - 🔐 **User Authentication** - Secure login/logout system with role-based access control
 - 👥 **Multi-User Support** - Admin, user, and viewer roles
 - 📁 **Document Isolation** - Users only see their own documents (unless shared)
@@ -328,7 +328,7 @@ User Adds *.py File
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Ollama
 - SQLite (for optional authentication)
 
