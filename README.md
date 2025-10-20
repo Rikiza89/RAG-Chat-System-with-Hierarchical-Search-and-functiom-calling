@@ -324,6 +324,8 @@ User Adds *.py File
 
 ---
 
+## Installation
+
 ### Prerequisites
 
 - Python 3.8+
@@ -337,9 +339,18 @@ git clone https://github.com/Rikiza89/RAG-Chat-System-with-Hierarchical-Search.g
 cd RAG-Chat-System-with-Hierarchical-Search
 ```
 
-### 2. Install Python Dependencies
+### 2. Create venv and Install Python Dependencies
 
 ```bash
+# Create and activate virtual environment
+python -m venv venv
+
+# (Windows)
+venv\Scripts\activate
+
+# (macOS/Linux)
+source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
@@ -2331,6 +2342,15 @@ This software is provided "as is" without warranty. For production use:
 # Clone repository
 git clone https://github.com/Rikiza89/RAG-Chat-System-with-Hierarchical-Search-and-functiom-calling.git
 cd RAG-Chat-System-with-Hierarchical-Search-and-functiom-calling
+
+# Create and activate virtual environment
+python -m venv venv
+
+# (Windows)
+venv\Scripts\activate
+
+# (macOS/Linux)
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
