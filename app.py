@@ -914,6 +914,7 @@ def generate_prompt(context, question, strategy="direct"):
 def generate_prompt_with_functions(context, question, strategy="direct"):
     """
     Enhanced prompt that tells LLM about available functions
+    Filters out internal helper functions
     """
     global function_manager
     
@@ -923,16 +924,38 @@ def generate_prompt_with_functions(context, question, strategy="direct"):
     # Add function instructions if available
     func_instructions = ""
     if function_manager and function_manager.function_registry:
-        available = list(function_manager.function_registry.keys())[:5]
-        func_list = '\n'.join(f"  - {f}" for f in available)
+        # Filter out internal/helper functions
+        available = []
+        excluded_patterns = [
+            'auto_detector',
+            'enhanced_process',
+            'get_function_suggestions',
+            'UniversalAutoDetector',
+            '_helper',
+            'internal_'
+        ]
         
-        func_instructions = f"""
+        for func_name in function_manager.function_registry.keys():
+            # Skip if matches excluded patterns
+            if any(pattern in func_name.lower() for pattern in excluded_patterns):
+                continue
+            available.append(func_name)
+        
+        # Only show first 10 functions to avoid overwhelming the LLM
+        available = sorted(available)[:10]
+        
+        if available:
+            func_list = '\n'.join(f"  - {f}" for f in available)
+            
+            func_instructions = f"""
 
-Available Functions:
+Available Functions (you can call these):
 {func_list}
 
-To use a function, include: <run:function_name arg=value>
+To use a function, write: <run:function_name arg=value>
 Example: <run:math/add a=15 b=27>
+
+⚠️ ONLY call functions from the list above. Do NOT call any other functions.
 """
     
     # Build prompt
@@ -940,6 +963,7 @@ Example: <run:math/add a=15 b=27>
     prompt = prompt + func_instructions
     
     return prompt
+
 
 def ollama_generate(prompt, strategy="direct"):
     """Call Ollama with error handling and retry logic"""
