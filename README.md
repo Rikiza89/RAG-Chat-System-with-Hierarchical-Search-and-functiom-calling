@@ -324,7 +324,7 @@ User Adds *.py File
 
 ---
 
-## Installation
+## 📊 Installation
 
 ### Prerequisites
 
