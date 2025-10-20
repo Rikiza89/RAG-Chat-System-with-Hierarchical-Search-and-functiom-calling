@@ -299,19 +299,43 @@ def detect_math_expressions(answer_text: str, manager) -> List[Dict]:
 
 def enhance_prompt_with_functions(context: str, question: str, function_manager) -> str:
     """
-    Enhance the prompt to inform LLM about available functions
+    Alternative version - enhance the prompt to inform LLM about available functions
+    With better filtering of internal functions
     """
     if not function_manager or not function_manager.function_registry:
         return ""
     
-    # Get top 10 most relevant functions
-    available_funcs = list(function_manager.function_registry.keys())[:10]
+    # Filter functions - exclude internal/helper functions
+    excluded_patterns = [
+        'auto_detector',
+        'enhanced_process',
+        'get_function_suggestions',
+        'UniversalAutoDetector',
+        '_',  # Anything starting with underscore
+    ]
+    
+    available_funcs = []
+    for func_name, func_data in function_manager.function_registry.items():
+        # Skip if matches excluded patterns
+        if any(pattern in func_name for pattern in excluded_patterns):
+            continue
+        
+        available_funcs.append({
+            'name': func_name,
+            'sig': func_data['signature'],
+            'doc': func_data['doc']
+        })
+    
+    # Limit to top 10 most relevant
+    available_funcs = available_funcs[:10]
+    
+    if not available_funcs:
+        return ""
     
     func_descriptions = []
-    for func_name in available_funcs:
-        func_data = function_manager.function_registry[func_name]
+    for func_info in available_funcs:
         func_descriptions.append(
-            f"- {func_name}{func_data['signature']}: {func_data['doc']}"
+            f"- {func_info['name']}{func_info['sig']}: {func_info['doc']}"
         )
     
     functions_info = "\n".join(func_descriptions)
@@ -323,6 +347,8 @@ If you need to call a function, use this syntax:
 <run:function_name arg1=value1 arg2=value2>
 
 For example: <run:math/add a=15 b=27>
+
+⚠️ Important: ONLY use functions listed above. Do not invent or call unlisted functions.
 
 Context: {context}
 
