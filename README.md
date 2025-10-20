@@ -2,9 +2,9 @@
 
 A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-based document organization, local LLM integration via Ollama, dynamic Python function execution, and optional authentication.
 
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.11.9-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-2.0+-green.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ## 🌟 Features
 
