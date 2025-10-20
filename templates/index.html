@@ -159,10 +159,54 @@
         
         .thinking-section {
             background: #fff9e6;
-            padding: 15px;
+            padding: 0;
             border-radius: 8px;
             margin-bottom: 15px;
             border-left: 4px solid #ffc107;
+            overflow: hidden;
+        }
+        
+        .thinking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        
+        .thinking-header:hover {
+            background: rgba(255, 193, 7, 0.1);
+        }
+        
+        .thinking-title {
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .collapse-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s;
+        }
+        
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .thinking-content {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            padding: 0 15px 15px 15px;
+        }
+        
+        .thinking-content.collapsed {
+            max-height: 0;
+            padding: 0 15px;
         }
         
         .function-outputs {
@@ -387,8 +431,16 @@
             {% if answer %}
                 {% if thinking %}
                 <div class="thinking-section">
-                    <h3>💭 Thinking Process:</h3>
-                    <pre style="white-space: pre-wrap; font-family: inherit;">{{ thinking }}</pre>
+                    <div class="thinking-header" onclick="toggleThinking()">
+                        <div class="thinking-title">
+                            <span>💭</span>
+                            <span>Thinking Process</span>
+                        </div>
+                        <span class="collapse-icon" id="thinking-icon">▼</span>
+                    </div>
+                    <div class="thinking-content" id="thinking-content">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">{{ thinking }}</pre>
+                    </div>
                 </div>
                 {% endif %}
                 
@@ -518,6 +570,14 @@ Content-Type: application/json
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
+        }
+        
+        function toggleThinking() {
+            const content = document.getElementById('thinking-content');
+            const icon = document.getElementById('thinking-icon');
+            
+            content.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
         }
         
         function loadFunctions() {
