@@ -1,7 +1,56 @@
-MIT License Copyright (c) 2025 Rikiza
+# GNU Affero General Public License v3.0
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+**Project:** RAG-Chat-System-with-Hierarchical-Search-and-functiom-calling  
+**Author:** © 2025 Rikiza89  
+**License:** GNU Affero General Public License v3.0 (AGPL-3.0)
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+---
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+This program is free software: you can redistribute it and/or modify  
+it under the terms of the GNU Affero General Public License as published by  
+the Free Software Foundation, either version 3 of the License, or  
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,  
+but **without any warranty**; without even the implied warranty of  
+**merchantability or fitness for a particular purpose**.  
+See the GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License  
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+---
+
+## Summary of Your Rights
+
+- You may **use**, **study**, **modify**, and **redistribute** this software freely.  
+- If you **distribute or host** a modified version (for example, as a web application),  
+  you must also **make the modified source code available** to users who interact with it.  
+- All derivative works must remain under the same AGPL-3.0-or-later license.
+
+---
+
+## SPDX Identifier
+```
+SPDX-License-Identifier: AGPL-3.0-or-later
+```
+
+---
+
+### Full License Text
+
+RAG-Chat-System-with-Hierarchical-Search-and-functiom-calling  
+Copyright (C) 2025  Rikiza89
+
+This program is free software: you can redistribute it and/or modify  
+it under the terms of the GNU Affero General Public License as published by  
+the Free Software Foundation, either version 3 of the License, or  
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,  
+but WITHOUT ANY WARRANTY; without even the implied warranty of  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the  
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License  
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
