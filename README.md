@@ -55,9 +55,9 @@ A robust Retrieval-Augmented Generation (RAG) system with intelligent folder-bas
 
 ## 📋 Table of Contents
 
+- [Architecture](#-architecture)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
-- [Architecture](#-architecture)
 - [Function System](#-function-system)
 - [Office Document Functions](#-office-document-functions)
 - [Advanced Problem Solving](#-advanced-problem-solving)
