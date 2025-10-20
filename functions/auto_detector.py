@@ -218,12 +218,17 @@ class UniversalAutoDetector:
             return f"<run:{func} ...>"
 
 
-# Integration with app.py
+# ============================================================================
+# Integration Functions (prefixed with _ to avoid being registered)
+# ============================================================================
 
-def enhanced_process_answer_with_functions(answer_text, question, function_manager):
+def _enhanced_process_answer_with_functions(answer_text, question, function_manager):
     """
     Enhanced version with universal auto-detection
     Drop-in replacement for process_answer_with_functions
+    
+    NOTE: This function is NOT meant to be called through the function manager!
+    It's a helper function called directly from app.py
     """
     if not function_manager:
         return answer_text, []
@@ -282,10 +287,17 @@ def enhanced_process_answer_with_functions(answer_text, question, function_manag
     return processed_text, function_outputs
 
 
-def get_function_suggestions(question, function_manager):
+def _get_function_suggestions(question, function_manager):
     """
     Get function suggestions without executing
     Useful for UI hints
+    
+    NOTE: Prefixed with _ to avoid being registered as executable function
     """
     detector = UniversalAutoDetector(function_manager)
     return detector.suggest_functions(question, top_n=3)
+
+
+# Public alias (for backward compatibility)
+enhanced_process_answer_with_functions = _enhanced_process_answer_with_functions
+get_function_suggestions = _get_function_suggestions
